@@ -37,10 +37,15 @@ done
 ## how to get it atleast working on every platform vrchat actually supports (except for ios)
 ### android
 first you'll need [termux](https://termux.dev/) which is a terminal/shell/package manager without needing to root your device.
+
 in termux, setup your package repository mirrors with `termux-change-repo` and run `pkg install git rust` to install git and rust to your device.
+
 clone this repo by running `git clone github.com/TooManyChoices/vrchatbox` and go into it with `cd vrchatbox`
+
 finally you can run `cargo build --release` and a binary should be made as `target/release/vrchatbox`
+
 you could instead run `cargo install --path .` to have the binary go into a directory that any cargo thing you install goes to, but then you'd have to add that directoy to your $PATH to run it and that's out of the scope of this README.md.
+
 good luck writing a bash script on mobile ;-;
 
 ### quest 3
