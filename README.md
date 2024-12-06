@@ -8,7 +8,7 @@ simple program to send unix stdin or operands as vrchat chatbox input.
 1. `cargo install --path .`
 2. now u can use anywhere as the current user
 ## how to use
-do `vrchat -h` for all flags you can use
+do `vrchatbox -h` for all flags you can use
 you can use this in bash/zsh/whatever scripts to chatbox abuse because you're just sooo cool and above whatever other people (the people you are talking to/are trying to talk to you) feel about it.
 
 as an example, here's a sh script i made to show my content cache size whenever it changes, clearing it after a measly 5 seconds too.
