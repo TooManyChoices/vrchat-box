@@ -1,0 +1,9 @@
+[package]
+name = "vrchatbox"
+description = "send stdin/operands to vrchat as chatbox input"
+version = "1.0.0"
+repository = "https://github.com/TooManyChoices/vrchatbox"
+edition = "2021"
+
+[dependencies]
+rosc = "0.10.1"
