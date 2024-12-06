@@ -48,16 +48,17 @@ you could instead run `cargo install --path .` to have the binary go into a dire
 
 good luck writing a bash script on mobile ;-;
 
-### quest 3
-it's actually the same process as on android, because, quest 3 runs on android, but you need developer mode on to install termux.
+### quest/pico vr headsets
+it's actually the same process as on android, because they are just android, but you need developer mode on quest to install termux, and idk about pico.
 
 ### windows
-i haven't tried this but i'm assuming it'll work. the issue is that the windows shell doesn't have stdin (as far as i know, if it does post an issue calling me an ignorant dumbass) but you could probably use [cygwin](https://cygwin.com/) as it has a posix compatible shell. you could also try wsl if osc works through that.
+i haven't tried this, but i'm assuming it'll work. to get stdin on windows you could probably use [cygwin](https://cygwin.com/) as it has a bash shell. you could also try the windows subsystem on linux, if osc even works through that.
 
 ## plans
-- have a gui app because this is completely unreasonable outside of usage in scripts
+- have a gui app (with android support)
+- something else i forgot  
 
 ___
 *ahem*
 
-Neither "vrchatbox" or this repository are endorsed by VRChat and do not reflect the views or opinions of VRChat or anyone officially involved in producing or managing VRChat properties. VRChat and all associated properties are trademarks or registered trademarks of VRChat Inc. VRChat © VRChat Inc.
+This repository is not endorsed by VRChat and does not reflect the views or opinions of VRChat or anyone officially involved in producing or managing VRChat properties. VRChat and all associated properties are trademarks or registered trademarks of VRChat Inc. VRChat © VRChat Inc.
