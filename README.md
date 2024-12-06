@@ -1,5 +1,5 @@
 # vrchatbox
-simple program to send unix stdin or operands as vrchat chatbox input.
+simple osc client to send stdin/operands to vrchat as chatbox input.
 ## building
 1. clone this repo `git clone this-repo`
 2. cargo build `cargo build`
@@ -8,8 +8,13 @@ simple program to send unix stdin or operands as vrchat chatbox input.
 1. `cargo install --path .`
 2. now u can use anywhere as the current user
 ## how to use
-do `vrchatbox -h` for all flags you can use
-you can use this in bash/zsh/whatever scripts to chatbox abuse because you're just sooo cool and above whatever other people (the people you are talking to/are trying to talk to you) feel about it.
+run `vrchatbox -h`
+
+small examples:
+- `fortune | vrchatbox`
+- `playerctl metadata title | vrchatbox`
+
+you can also use this in sh scripts to chatbox abuse with ultimate configuration, i guess.
 
 as an example, here's a sh script i made to show my content cache size whenever it changes, clearing it after a measly 5 seconds too.
 ```sh
