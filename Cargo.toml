@@ -1,9 +1,10 @@
 [package]
-name = "vrchatbox"
-description = "send stdin/operands to vrchat as chatbox input"
-version = "1.0.0"
+name = "vrchat-box"
+description = "Send stdin to VRChat as chatbox messages."
+version = "1.1.0"
 repository = "https://github.com/TooManyChoices/vrchatbox"
 edition = "2021"
+license-file = "LICENSE"
 
 [dependencies]
 rosc = "0.10.1"

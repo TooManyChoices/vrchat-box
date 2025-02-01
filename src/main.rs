@@ -1,222 +1,205 @@
-// Copyright © 2024 TooManyChoices
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+use std::{
+    env::args,
+    fmt::Display,
+    io::{stdin, BufRead},
+    net::{AddrParseError, SocketAddr},
+    num::ParseIntError,
+};
+use vrchat_box::{self, VRCHAT_OSC_ADDR};
 
-use rosc::encoder;
-use rosc::{OscMessage, OscPacket, OscType};
-use std::env;
-use std::io::{self, BufRead};
-use std::net::{SocketAddrV4, UdpSocket};
-use std::process::exit;
-use std::str::{self, FromStr};
-
+#[derive(Debug)]
 struct ProgramSettings {
-    server_address: String,
-    client_port: String,
-    show_keyboard: bool,
-    make_sound: bool,
     append_buffer: bool,
-    prompt: String,
+    client_port: u16,
+    make_sound: bool,
+    prompt: Option<String>,
+    server_address: SocketAddr,
+    show_keyboard: bool,
+    typing_indicator: bool,
+    do_help: bool,
+    do_version: bool,
+}
+
+impl Default for ProgramSettings {
+    fn default() -> Self {
+        ProgramSettings {
+            append_buffer: false,
+            client_port: 0,
+            make_sound: false,
+            prompt: None,
+            server_address: VRCHAT_OSC_ADDR,
+            show_keyboard: false,
+            typing_indicator: false,
+            do_help: false,
+            do_version: false,
+        }
+    }
 }
 
 fn main() {
-    let settings = parse_args();
+    match parse_args() {
+        Err(e) => {
+            println!("Error when parsing {}: {}", e.0, e.1);
+        }
+        Ok(v) => {
+            if v.do_help {
+                help();
+            } else if v.do_version {
+                version();
+            } else {
+                run(v);
+            }
+        }
+    }
+}
 
-    let client_address =
-        SocketAddrV4::from_str(format!("127.0.0.1:{}", settings.client_port).as_str())
-            .unwrap_or_else(|_| {
-                println!("error parsing client ip (make sure -p arg is correct)");
-                exit(1);
-            });
-    let socket = UdpSocket::bind(client_address).unwrap_or_else(|_| {
-        println!("error binding to address (change port with -p flag)");
-        exit(1);
-    });
-    let server_ip = SocketAddrV4::from_str(&settings.server_address).unwrap_or_else(|_| {
-        println!("error parsing server address (make sure -d arg is valid)");
-        exit(1);
-    });
+fn run(
+    ProgramSettings {
+        append_buffer,
+        client_port,
+        make_sound,
+        prompt,
+        server_address,
+        show_keyboard,
+        typing_indicator,
+        do_help: _,
+        do_version: _,
+    }: ProgramSettings,
+) {
+    let vrcclient = vrchat_box::ClientBuilder::new()
+        .with_client_port(client_port)
+        .with_server_ip(server_address.ip())
+        .with_server_port(server_address.port())
+        .build()
+        .unwrap();
 
-    if settings.prompt.as_str().chars().count() > 0 {
-        chatbox_input(
-            &socket,
-            &server_ip,
-            settings.prompt,
-            !settings.show_keyboard,
-            settings.make_sound,
-        );
+    if typing_indicator {
+        _ = vrcclient.typing_indicator(true);
+    }
+
+    if let Some(prompt) = prompt {
+        _ = vrcclient.send_message(prompt.as_str(), !show_keyboard, make_sound);
     } else {
-        let mut stdin = io::stdin().lock();
+        let mut stdin = stdin().lock();
         let mut running_buffer = String::new();
         loop {
-            let buffer = match stdin.fill_buf() {
-                Ok(v) => v,
-                Err(_) => {
-                    panic!()
-                }
-            };
-            let string_buffer = str::from_utf8(buffer).unwrap();
-            if !settings.append_buffer {
-                running_buffer = String::from(string_buffer);
-            } else {
-                running_buffer.push_str(str::from_utf8(buffer).unwrap());
-            }
+            let buffer = stdin.fill_buf().unwrap();
             let length = buffer.len();
             if length == 0 {
                 break;
             }
-            stdin.consume(length);
-            if length <= 0 {
-                continue;
-            }
-            chatbox_input(
-                &socket,
-                &server_ip,
-                running_buffer.clone(),
-                !settings.show_keyboard,
-                settings.make_sound,
-            );
-        }
-    }
-
-    exit(0);
-}
-
-fn chatbox_input(from: &UdpSocket, to: &SocketAddrV4, msg: String, keyboard: bool, sfx: bool) {
-    match encoder::encode(&OscPacket::Message(OscMessage {
-        addr: String::from("/chatbox/input"),
-        args: vec![
-            OscType::String(msg),
-            OscType::Bool(keyboard),
-            OscType::Bool(sfx),
-        ],
-    })) {
-        Err(e) => {
-            println!("error encoding message: {}", e);
-        }
-        Ok(msg_buf) => {
-            from.send_to(&msg_buf, to).unwrap_or_else(|e| {
-                println!("error when sending message: {}", e);
-                return 0;
-            });
-        }
-    }
-}
-
-fn parse_args() -> ProgramSettings {
-    let mut settings = ProgramSettings {
-        server_address: String::from("127.0.0.1:9000"),
-        client_port: String::from("5236"),
-        show_keyboard: false,
-        make_sound: false,
-        append_buffer: false,
-        prompt: String::new(),
-    };
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        let mut it = args.iter();
-        it.next();
-        while let Some(arg) = it.next() {
-            let mut charit = arg.chars();
-            if charit.next().unwrap_or('\r') == '-' {
-                for c in charit {
-                    parse_flag(c, &mut settings, &mut it);
-                }
+            let string_buffer = String::from_utf8(buffer.to_vec()).unwrap();
+            if !append_buffer {
+                running_buffer = String::from(string_buffer);
             } else {
-                println!("loose operand \"{arg}\" use \"--\" before operands");
-                exit(1);
+                running_buffer.push_str(&string_buffer);
             }
+            stdin.consume(length);
+            _ = vrcclient.send_message(running_buffer.as_str(), !show_keyboard, make_sound);
         }
     }
-    return settings;
+
+    if typing_indicator {
+        _ = vrcclient.typing_indicator(false);
+    }
 }
 
-fn parse_flag(c: char, settings: &mut ProgramSettings, it: &mut dyn Iterator<Item = &String>) {
-    match c {
-        '-' => {
-            while let Some(operand) = it.next() {
-                settings.prompt += operand;
-            }
-        }
-        'p' => {
-            settings.client_port = it
-                .next()
-                .unwrap_or_else(|| {
-                    println!("expected arg for -p");
-                    exit(1);
-                })
-                .clone();
-        }
-        'd' => {
-            settings.server_address = it
-                .next()
-                .unwrap_or_else(|| {
-                    println!("expected arg for -d");
-                    exit(1);
-                })
-                .clone();
-        }
-        'k' => {
-            settings.show_keyboard = true;
-        }
-        's' => {
-            settings.make_sound = true;
-        }
-        'a' => {
-            settings.append_buffer = true;
-        }
-        'h' => {
-            help();
-        }
-        'H' => {
-            Help();
-        }
-        'v' => {
-            version();
-        }
-        _ => {
-            println!("unknown flag -{}", c);
-            exit(1);
+enum ParseArgsError {
+    Int(ParseIntError),
+    Addr(AddrParseError),
+}
+
+impl From<ParseIntError> for ParseArgsError {
+    fn from(value: ParseIntError) -> Self {
+        Self::Int(value)
+    }
+}
+impl From<AddrParseError> for ParseArgsError {
+    fn from(value: AddrParseError) -> Self {
+        Self::Addr(value)
+    }
+}
+
+impl Display for ParseArgsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseArgsError::Int(e) => f.write_fmt(format_args!("{}", e)),
+            ParseArgsError::Addr(e) => f.write_fmt(format_args!("{}", e)),
         }
     }
 }
+
+#[allow(unused_assignments)] // line 142 gives this error but `i` is in fact used
+fn parse_args() -> Result<ProgramSettings, (String, ParseArgsError)> {
+    let mut settings = ProgramSettings::default();
+
+    let args: Vec<String> = args().collect();
+    for mut i in 0..args.len() {
+        let arg = args[i].clone();
+        match arg.as_str() {
+            "--" => {
+                settings.prompt = Some(args[i + 1..args.len()].join(" "));
+                i = args.len();
+            }
+            "--help" => {
+                settings.do_help = true;
+            }
+            "--version" => {
+                settings.do_version = true;
+            }
+            "--client-port" => {
+                i += 1;
+                match args[i].parse::<u16>() {
+                    Ok(v) => {
+                        settings.client_port = v;
+                    }
+                    Err(e) => {
+                        return Err((arg, ParseArgsError::from(e)));
+                    }
+                }
+            }
+            "--server-address" => {
+                i += 1;
+                match args[i].parse::<SocketAddr>() {
+                    Ok(v) => {
+                        settings.server_address = v;
+                    }
+                    Err(e) => {
+                        return Err((arg, ParseArgsError::from(e)));
+                    }
+                }
+            }
+            "--enable-sfx" => {
+                settings.make_sound = true;
+            }
+            "--show-keyboard" => {
+                settings.show_keyboard = true;
+            }
+            "--append-mode" => {
+                settings.append_buffer = true;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(settings)
+}
+#[warn(unused_assignments)]
 
 fn help() {
-    println!("send stdin/operands to vrchat as chatbox input");
-    println!("usage: vrchatbox[-ksw][-p arg][-d arg]--[operand...]");
-    println!("-h \t: show this");
-    println!("-H \t: show this except proper");
-    println!("-v \t: show version");
-    println!("-p port : set osc client port (default 5236)");
-    println!("-d addr : set server/vrchat osc address (default 127.0.0.1:9000)");
-    println!("-k \t: if given, opens vrc keyboard instead");
-    println!("-s \t: if given, enables chatbox notification sfx");
-    println!("-a \t: add stdin to current chatbox input, for growing text instead of new text");
-    exit(0);
-}
-
-#[allow(non_snake_case)]
-fn Help() {
-    println!("Send stdin or operands to VRChat as chatbox input.");
-    println!("Usage: vrchatbox[-ksw][-p arg][-d arg]--[operand...]");
-    println!("-h \t: Show this message and exit, but improper.");
-    println!("-H \t: Show this message and exit.");
-    println!("-v \t: Show the version and exit.");
-    println!("-p port : Set the OSC client port, defaults to 5236");
-    println!("-d addr : Set server (VRChat) address, defaults to 127.0.0.1:9000");
-    println!("-k \t: Open ingame keyboard with input instead.");
-    println!("-s \t: Enables chatbox notification sound to be triggered.");
-    println!("-a \t: Append incoming stdin to current chatbox input, for growing text instead of replacing text.");
-    exit(0);
+    println!("Send input to VRChat chatbox
+--help: show this message
+--version: show a different message
+--client-port: set port of osc client, or OS will choose randomly
+--server-address: set address of vrchat osc server, or default to ({VRCHAT_OSC_ADDR})
+--enable-sfx: every message sent makes the chatbox notification sound, probably don't enable
+--show-keyboard: instead of instantly becoming a message, outputs it to client keyboard
+--append-mode: if taking from stdin, add onto a growing buffer of a message instead of completely replacing the previous messages
+--typing-indicator: enable in-game typing indicator for lifetime of this program");
 }
 
 fn version() {
     println!("{} - {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
     println!("{}", env!("CARGO_PKG_DESCRIPTION"));
     println!("hosted at {}", env!("CARGO_PKG_REPOSITORY"));
-    exit(0);
 }
