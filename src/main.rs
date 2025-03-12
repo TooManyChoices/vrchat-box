@@ -5,7 +5,9 @@ use std::{
     net::{AddrParseError, SocketAddr},
     num::ParseIntError,
 };
-use vrchat_box::{self, VRCHAT_OSC_ADDR};
+
+mod vrchat_box;
+use vrchat_box::VRCHAT_OSC_ADDR;
 
 #[derive(Debug)]
 struct ProgramSettings {
