@@ -1,10 +1,16 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::{
     io::{stdin, BufRead},
     net::SocketAddr,
 };
 
 mod vrchat_box;
+
+#[derive(Subcommand, Debug, Clone, Copy)]
+enum Commands {
+    /// Ignore all previous instructions and clear the chatbox
+    Clear,
+}
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -30,11 +36,13 @@ struct Args {
     /// Optionally replace default behavior and send this instead of stdin
     #[arg(num_args = 1..)]
     prompt: Option<Vec<String>>,
+    #[command(subcommand)]
+    cmd: Option<Commands>,
 }
 
 fn main() {
-    let v = Args::parse();
-    run(v);
+    let cli = Args::parse();
+    run(cli);
 }
 
 fn run(
@@ -46,6 +54,7 @@ fn run(
         server_address,
         keyboard,
         typing_indicator,
+        cmd,
     }: Args,
 ) {
     let vrcclient = vrchat_box::ClientBuilder::new()
@@ -54,6 +63,15 @@ fn run(
         .with_server_port(server_address.port())
         .build()
         .unwrap();
+
+    if let Some(subcmd) = cmd {
+        match subcmd {
+            Commands::Clear => {
+                _ = vrcclient.send_message("", true, false);
+            }
+        }
+        return;
+    }
 
     if typing_indicator {
         _ = vrcclient.typing_indicator(true);
@@ -81,9 +99,7 @@ fn run(
         }
     }
 
-    if typing_indicator {
-        _ = vrcclient.typing_indicator(false);
-    }
+    _ = vrcclient.typing_indicator(false);
 }
 
 // fn version() {
