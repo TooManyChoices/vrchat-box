@@ -8,32 +8,37 @@ mod vrchat_box;
 
 #[derive(Subcommand, Debug, Clone, Copy)]
 enum Commands {
-    /// Ignore all previous instructions and clear the chatbox
+    /// Clears the chatbox
     Clear,
+    /// Print version and other program info
+    Version,
 }
 
 #[derive(Debug, Parser)]
-#[command(version)]
+#[command(version, disable_version_flag = true)]
 struct Args {
-    /// Show full stdin for message instead of replacing the current message
+    /// Print version and other program info
+    #[arg(long = "version", short = 'V')]
+    show_version: bool,
+    /// Always send full stdin as message
     #[arg(long, short = 'a')]
     dont_replace: bool,
-    /// Enable playing chatbox notification sound for other users
+    /// Enable chatbox notification sound
     #[arg(long, short)]
     sfx: bool,
-    /// Replace default behavior and open ingame keyboard with the input
+    /// Open ingame keyboard with any input
     #[arg(long, short)]
     keyboard: bool,
-    /// Show typing indicator for the lifetime of this program
+    /// Show typing indicator for entire runtime
     #[arg(long, short)]
     typing_indicator: bool,
-    /// Manually set the OSC address to send messages to
+    /// Address to send messages to
     #[arg(long, short = 'S', default_value_t = vrchat_box::VRCHAT_OSC_ADDR)]
     server_address: SocketAddr,
-    /// Manually set the client port to send messages from, default should be fine as the port is chosen by the os
+    /// Port to open on to send messages from
     #[arg(long, short = 'C', default_value_t = 0)]
     client_port: u16,
-    /// Optionally replace default behavior and send this instead of stdin
+    /// Send once and exit
     #[arg(num_args = 1..)]
     prompt: Option<Vec<String>>,
     #[command(subcommand)]
@@ -55,6 +60,7 @@ fn run(
         keyboard,
         typing_indicator,
         cmd,
+        show_version,
     }: Args,
 ) {
     let vrcclient = vrchat_box::ClientBuilder::new()
@@ -64,10 +70,18 @@ fn run(
         .build()
         .unwrap();
 
+    if show_version {
+        version();
+        return;
+    }
+
     if let Some(subcmd) = cmd {
         match subcmd {
             Commands::Clear => {
                 _ = vrcclient.send_message("", true, false);
+            }
+            Commands::Version => {
+                version();
             }
         }
         return;
@@ -102,8 +116,8 @@ fn run(
     _ = vrcclient.typing_indicator(false);
 }
 
-// fn version() {
-//     println!("{} - {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-//     println!("{}", env!("CARGO_PKG_DESCRIPTION"));
-//     println!("hosted at {}", env!("CARGO_PKG_REPOSITORY"));
-// }
+fn version() {
+    println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    println!("{}", env!("CARGO_PKG_DESCRIPTION"));
+    println!("hosted at {}", env!("CARGO_PKG_REPOSITORY"));
+}
