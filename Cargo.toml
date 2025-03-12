@@ -16,4 +16,5 @@ codegen-units = 1
 opt-level = "z"
 
 [dependencies]
+clap = { version = "4.5.32", features = ["derive"] }
 rosc = "0.10.1"

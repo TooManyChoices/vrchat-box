@@ -2,7 +2,6 @@
 //!
 //! Provides [Client] which can send "chatbox/input" or "chatbox/typing" messages to any address you set.
 //!
-
 use rosc::{encoder, OscMessage, OscPacket, OscType};
 use std::{
     io,
@@ -22,6 +21,7 @@ pub struct ClientBuilder {
 /// Contains the socket to connect to VRChat OSC to send messages.
 ///
 /// Can either be created with a [ClientBuilder] or [Client::new]
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Client {
     client_socket: UdpSocket,
@@ -31,6 +31,7 @@ pub struct Client {
 impl Client {
     /// Create a [Client] without [ClientBuilder].
     /// client_socket.
+    #[allow(dead_code)]
     pub fn new(server_address: SocketAddr, client_socket: UdpSocket) -> Self {
         Client {
             client_socket,
@@ -81,6 +82,7 @@ impl Client {
     /// Change the address (ip and port) that the client sends OSC messages to.
     ///
     /// Err if the socket could not connect to the new address
+    #[allow(dead_code)]
     pub fn change_server_address(&mut self, new_address: SocketAddr) -> io::Result<()> {
         self.change_server_ip(new_address.ip())?;
         self.change_server_port(new_address.port())?;
@@ -90,6 +92,7 @@ impl Client {
     /// Change the ip that the client sends OSC messages to.
     ///
     /// Err if the socket could not connect to the new address.
+    #[allow(dead_code)]
     pub fn change_server_ip(&mut self, new_ip: IpAddr) -> io::Result<()> {
         self.server_address.set_ip(new_ip);
         self.client_socket.connect(self.server_address)?;
@@ -99,6 +102,7 @@ impl Client {
     /// Change the port that the client sends OSC messages to.
     ///
     /// Err if the socket could not connect to the new address.
+    #[allow(dead_code)]
     pub fn change_server_port(&mut self, new_port: u16) -> io::Result<()> {
         self.server_address.set_port(new_port);
         self.client_socket.connect(self.server_address)?;
